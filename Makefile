@@ -11,3 +11,10 @@ publish:
 	git add .
 	git commit -m "sleepy work 2022 November"
 	git push
+
+
+
+sudopass:
+	@echo visudo
+	@echo 'tony ALL=(ALL) NOPASSWD: ALL'
+	@echo should be last line
