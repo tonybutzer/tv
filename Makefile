@@ -18,3 +18,11 @@ sudopass:
 	@echo visudo
 	@echo 'tony ALL=(ALL) NOPASSWD: ALL'
 	@echo should be last line
+
+
+build:
+	docker build -t tv .
+
+
+dtest:
+	docker run -it --network host tv bash
