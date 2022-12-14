@@ -67,19 +67,3 @@ class HDHR:
             sys.exit(msg)
         return(self.deviceid)
 
-def main():
-    hdhr = HDHR()
-    deviceid = hdhr.get_deviceid()
-    print (deviceid)
-    hdhomerun_config = "/usr/bin/hdhomerun_config"
-    tuner = 0
-    
-    channels = channel_info(hdhomerun_config, deviceid, tuner)
-
-    for c in channels:
-        print(', '.join(c))
-        #print(c)
-
-    
-
-main()
