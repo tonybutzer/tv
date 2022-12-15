@@ -16,6 +16,47 @@ import xmltodict
 
 from zoneinfo import ZoneInfo
 from datetime import datetime, timezone, timedelta
+import pandas as pd
+
+
+class CHANNEL:
+    def __init__(self):
+        print('channel')
+        self.df = pd.read_csv('channels.csv')
+        print(self.df.head())
+        print('hello')
+        
+    def scan(self):
+        hdhr = HDHR()
+        deviceid = hdhr.get_deviceid()
+        print (deviceid)
+        hdhomerun_config = "/usr/bin/hdhomerun_config"
+        tuner = 0
+
+        channels = channel_info(hdhomerun_config, deviceid, tuner)
+
+        for c in channels:
+            print(', '.join(c))
+
+        sourceFile = open('channels.csv', 'w')
+        print('human_channel, freq, phys, sub, station')
+        print('human_channel,freq,phys,sub,station', file=sourceFile)
+        for c in channels:
+            print(', '.join(c), file=sourceFile)
+
+        sourceFile.close()
+
+    def phys(self,human_channel):
+        mydf = self.df[self.df['human_channel'] == human_channel]
+        #_df1 = mydf[['phys', 'sub']]
+        print(mydf)
+        print(mydf['phys'])
+        print(mydf['sub'])
+
+        return str(mydf['phys'].values[0]), str(mydf['sub'].values[0])
+
+  
+        
 
 
 class TITAN:
@@ -26,7 +67,7 @@ class TITAN:
         dtobj = dtobj.replace(tzinfo=timezone.utc)
         dtobj = dtobj.astimezone(ZoneInfo('US/Central'))
         a = dtobj
-        print(a.strftime('%Y%m%d%H%M'))
+        # print(a.strftime('%Y%m%d%H%M'))
         return(a.strftime('%Y%m%d%H%M'))
 
     def _set_local_start_stop(self):
@@ -42,7 +83,7 @@ class TITAN:
 
 
     def __init__(self, file):
-        print('init')
+        # print('init')
         with open(file) as fd:
             self.doc = xmltodict.parse(fd.read())
         status = self._set_local_start_stop()
@@ -67,16 +108,26 @@ class TITAN:
         pass
     def end_date(self):
         pass
+
     def duration(self):
-        self.duration= self.doc['tv-program-info']['program']['duration']
-        return self.duration
+        _duration= self.doc['tv-program-info']['program']['duration']
+        (hrs, minutes) = _duration.split(':')
+        my_minutes = int(hrs)* 60 + int(minutes)
+        return my_minutes
+
+    def human_channel(self):
+        psip_major = self.doc['tv-program-info']['program']['psip-major']
+        psip_minor = self.doc['tv-program-info']['program']['psip-minor']
+        human_channel = f'{psip_major}.{psip_minor}'
+        print(human_channel)
+        return float(human_channel)
 
 def uniquify(path):
     filename, extension = os.path.splitext(path)
     counter = 1
 
     while os.path.exists(path):
-        path = filename + " (" + str(counter) + ")" + extension
+        path = filename + "__" + str(counter) + "_" + extension
         counter += 1
 
     return path
@@ -90,6 +141,13 @@ def get_files_titan_xml():
     for file in results:
         fresults.append(f'{dir_path}/{file}')
     return fresults
+
+def state_recording(program_xml):
+    dir_path = '/home/tony/tv/titan/recording'
+    filename = program_xml.split('/')[-1]
+    newpath = f'{dir_path}/{filename}'
+    os.rename(program_xml, newpath)
+    return (newpath)
 
 def get_channel_df(csvfile):
     df = pd.read_csv('channels.csv')
@@ -228,150 +286,4 @@ class HDHR:
             sys.exit(msg)
         return(self.deviceid)
 
-
-import sys, os, os.path
-import subprocess
-import signal
-import logging
-import heapq
-
-def rec_main():
-        
-    global logfile
-    logfile = 'recorder.log'
-    FORMAT = "%(asctime)-15s: %(message)s"
-    logging.basicConfig(level=logging.INFO, filename=logfile, filemode='w',
-                        format=FORMAT)
-
-
-    logging.info("Main process PID: %d, use this for sending SIGHUP "
-                         "for re-reading the schedule-file", os.getpid())
-                        
-    print("hello tony")  
-
-    basedir = '/home/tony/tv'
-    prog_name = 'myprogram'
-
-    now = datetime.now()
-
-    start = now
-    period = 30
-    channel='21'
-    subchannel='4'
-    jb = JOB(basedir, prog_name, start, period, channel, subchannel)
-
-    jb.record()
-
-
-def sighup_handler(signum, frame):
-    global reload_jobs
-    logging.info("Received SIGHUP, reloading schedule-file")
-    reload_jobs = True
-
-def sigterm_handler(signum, frame):
-    # TODO: Kill any recorder threads?
-    logging.info("Received SIGTERM, shutting down")
-    global shutdown
-    shutdown = True
-
-
-class TUNERS:
-    def __init__(self, str):
-        from threading import Lock
-
-        tuners = "".join(str.split()) # remove white space
-        tuners = tuners.split(',')
-        tuners = [tuple(x.split(':')[0:2]) for x in tuners]
-        # Add priority
-        self.tuner_list = [(i, v[0], v[1]) for i,v in enumerate(tuners)]
-        heapq.heapify(self.tuner_list)
-        self.lock = Lock()
-
-    def get_tuner(self):
-    #         self.lock.acquire()
-    #         try:
-    #             tuner = heapq.heappop(self.tuner_list)
-    #         except IndexError:
-    #             tuner = None
-    #         finally:
-    #             self.lock.release()
-    #         return tuner
-        return('103AF69D-0')
-
-    def put_tuner(self, tuner):
-        self.lock.acquire()
-        heapq.heappush(self.tuner_list, tuner)
-        self.lock.release()
-
-class JOB:
-    def __init__(self, basedir, prog_name, start, period, channel, subchannel):
-        self.basedir = os.path.normpath(basedir)
-        self.prog_name = prog_name
-        self.start = start
-        self.period = period
-        # TODO: We should correct stripping at the source.
-        self.channel = channel.strip()
-        self.subchannel = subchannel.strip()
-
-    def record(self):
-    #         tuner = tuners.get_tuner()
-    #         if tuner == None:
-    #             return
-        device_id = '103AF69D'
-        tuner_num = 0
-
-        self._record(device_id, tuner_num)
-
-
-#     try:
-#     #(prio, device_id, tuner_num) = tuner
-#     self._record(device_id, tuner_num)
-#     except:
-#     print('BUMMER')
-#     finally:
-#     # tuners.put_tuner(tuner)
-        return
-
-
-    def _record(self, device_id, tuner_num):
-        import time
-        import tempfile
-
-        hdhomerun_config = '/usr/bin/hdhomerun_config'
-        logging.info("Started recording %s on device: (%s, %s, %s:%s)" % (
-        self.prog_name, device_id, tuner_num,
-        self.channel, self.subchannel))
-        now = datetime.now()
-        date = now.strftime("%Y-%m-%d")
-        dirname = os.path.join(self.basedir, self.prog_name)
-        if not os.path.exists(dirname):
-            os.makedirs(dirname)
-        filename = os.path.join(dirname, "%s.ts" % date)
-        cmd = [hdhomerun_config, device_id, "set"]
-        cmd.extend(["/tuner%s/channel" % tuner_num, self.channel])
-        subprocess.Popen(cmd).wait()
-
-        cmd = [hdhomerun_config, device_id, "set"]
-        cmd.extend(["/tuner%s/program" % tuner_num, self.subchannel])
-        subprocess.Popen(cmd).wait()
-
-        cmd = [hdhomerun_config, device_id, "save"]
-        cmd.extend(["/tuner%s" % tuner_num, filename])
-        f = tempfile.TemporaryFile("w+")
-        p = subprocess.Popen(cmd, stdout=f, stderr=subprocess.STDOUT)
-
-        # Record from now to the end of the program.
-        now = datetime.now()
-        td = (datetime.combine(now.date(), self.start.time()) +
-        timedelta(minutes=self.period) - now)
-        timeleft = td.days * 24 * 60 * 60 + td.seconds
-        print(timeleft)
-        time.sleep(timeleft)
-        os.kill(p.pid, signal.SIGINT)
-        p.wait()
-
-        # Read the output from the save process
-        f.seek(0)
-        data = f.read()
-        f.close()
 
