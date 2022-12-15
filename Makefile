@@ -26,3 +26,14 @@ build:
 
 dtest:
 	docker run -it --network host tv bash
+
+
+toctool:
+	wget https://raw.githubusercontent.com/ekalinin/github-markdown-toc/master/gh-md-toc
+	chmod a+x gh-md-toc
+	sudo mv gh-md-toc /usr/local/bin
+
+
+toc:
+	gh-md-toc --insert --no-backup README.md
+
