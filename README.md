@@ -18,6 +18,17 @@ explore hdhr capabilities
 
 - test on dopey with better antenna
 
+- better tuner managment
+
+- reorganize code
+
+- document utilities
+
+- installation script to create all directories
+
+- theory of operation
+	- minimal stack using just hdhhomerun_config etc
+
 
 
 # Ref
