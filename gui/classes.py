@@ -160,7 +160,8 @@ class HDCTL:
         print(self.cdf)
         cdf = self.cdf
         print(cdf.loc[cdf['human_channel'] == 46.2])
-        self.device_id = '103AF69D'
+        #self.device_id = '103AF69D'
+        self.device_id = '10337F65'
         self.tuner = 0
         self.hdhomerun_config = '/usr/bin/hdhomerun_config'
 

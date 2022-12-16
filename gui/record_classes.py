@@ -120,7 +120,8 @@ class TUNERS:
 #         finally:
 #             self.lock.release()
 #         return tuner
-        return('103AF69D-0')
+        return('10337F65-0')
+        #return('103AF69D-0')
 
     def put_tuner(self, tuner):
         self.lock.acquire()
@@ -141,7 +142,8 @@ class JOB:
 #         tuner = tuners.get_tuner()
 #         if tuner == None:
 #             return
-        device_id = '103AF69D'
+        #device_id = '103AF69D'
+        device_id = '10337F65'
         tuner_num = 0
 
         self._record(device_id, tuner_num)
